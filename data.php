@@ -2,7 +2,7 @@
 
 include 'config.php';
 
-// Query for ear_left
+// Query for ear_leftt
 $sql_left = "SELECT frequency, dB_level FROM ear_left";
 $result_left = $conn->query($sql_left);
 
