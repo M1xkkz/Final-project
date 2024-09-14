@@ -6,7 +6,7 @@
     <title>Hearing Test Graphs</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2"></script>
-    <!-- เพิ่ม plugin -->
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
