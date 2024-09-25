@@ -19,19 +19,30 @@ if ($role === 'admin' && isset($_GET['view_user_id'])) {
     $user_id = $_GET['view_user_id']; // admin สามารถดูผลทดสอบของ user คนอื่นได้
 }
 
-// ดึงข้อมูลผลทดสอบหูซ้ายและขวาของผู้ใช้ที่ล็อกอิน
-$earLeftResults = $conn->query("SELECT frequency, dB_level FROM ear_left WHERE user_id = $user_id");
-$earRightResults = $conn->query("SELECT frequency, dB_level FROM ear_right WHERE user_id = $user_id");
+// รับค่าจากฟอร์มสำหรับวันที่และรอบที่ต้องการ
+$selected_date = isset($_GET['date']) ? $_GET['date'] : null; // กำหนดวันที่ที่เลือก
+$round = isset($_GET['round']) ? intval($_GET['round']) : 1; // กำหนดค่าเริ่มต้นที่รอบ 1 ถ้าไม่ได้ส่งค่าเข้ามา
 
-// เก็บข้อมูลในรูปแบบ array เพื่อนำไปแสดงในกราฟ
-$earLeftData = [];
-while ($row = $earLeftResults->fetch_assoc()) {
-    $earLeftData[] = $row;
-}
+// ตรวจสอบว่าผู้ใช้ได้เลือกวันที่หรือไม่
+if ($selected_date) {
+    // คำนวณการดึงข้อมูลตามรอบที่เลือกในวันที่เลือก
+    $offset = ($round - 1) * 7;
+    $limit = 7;
 
-$earRightData = [];
-while ($row = $earRightResults->fetch_assoc()) {
-    $earRightData[] = $row;
+    // ดึงข้อมูลผลทดสอบหูซ้ายและขวาของผู้ใช้ในวันที่เลือก
+    $earLeftResults = $conn->query("SELECT frequency, dB_level FROM ear_left WHERE user_id = $user_id AND DATE(test_date) = '$selected_date' LIMIT $limit OFFSET $offset");
+    $earRightResults = $conn->query("SELECT frequency, dB_level FROM ear_right WHERE user_id = $user_id AND DATE(test_date) = '$selected_date' LIMIT $limit OFFSET $offset");
+
+    // เก็บข้อมูลในรูปแบบ array เพื่อนำไปแสดงในกราฟ
+    $earLeftData = [];
+    while ($row = $earLeftResults->fetch_assoc()) {
+        $earLeftData[] = $row;
+    }
+
+    $earRightData = [];
+    while ($row = $earRightResults->fetch_assoc()) {
+        $earRightData[] = $row;
+    }
 }
 
 // ปิดการเชื่อมต่อ
@@ -59,16 +70,33 @@ $conn->close();
         </div>
 
         <h1>Hearing Test Results</h1>
-        <h2>Ear Left</h2>
-        <canvas id="earLeftChart"></canvas>
-        <h2>Ear Right</h2>
-        <canvas id="earRightChart"></canvas>
+
+        <!-- แบบฟอร์มสำหรับเลือกวันที่และรอบ -->
+        <form method="GET">
+            <label for="date">เลือกวันที่:</label>
+            <input type="date" name="date" id="date" value="<?php echo htmlspecialchars($selected_date); ?>" required>
+            
+            <label for="round">เลือกรอบ:</label>
+            <select name="round" id="round" onchange="this.form.submit()">
+                <?php for ($i = 1; $i <= 5; $i++): // สมมติว่ามีทั้งหมด 5 รอบ ?>
+                    <option value="<?php echo $i; ?>" <?php if ($round == $i) echo 'selected'; ?>>รอบที่ <?php echo $i; ?></option>
+                <?php endfor; ?>
+            </select>
+            <button type="submit">ยืนยัน</button>
+        </form>
+
+        <?php if ($selected_date): ?>
+            <h2>Ear Left (วันที่ <?php echo htmlspecialchars($selected_date); ?>, รอบที่ <?php echo $round; ?>)</h2>
+            <canvas id="earLeftChart"></canvas>
+            <h2>Ear Right (วันที่ <?php echo htmlspecialchars($selected_date); ?>, รอบที่ <?php echo $round; ?>)</h2>
+            <canvas id="earRightChart"></canvas>
+        <?php endif; ?>
     </div>
 
     <script>
         // ข้อมูลจาก PHP แปลงเป็น JSON
-        const earLeftData = <?php echo json_encode($earLeftData); ?>;
-        const earRightData = <?php echo json_encode($earRightData); ?>;
+        const earLeftData = <?php echo json_encode($earLeftData ?? []); ?>;
+        const earRightData = <?php echo json_encode($earRightData ?? []); ?>;
 
         // สร้างกราฟ
         function renderCharts() {
